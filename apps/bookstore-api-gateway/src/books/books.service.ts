@@ -1,29 +1,46 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { ClientProxy } from '@nestjs/microservices';
+import { BookDto } from './dto/book.dto';
 import { CreateBookDto } from './dto/create-book.dto';
 import { UpdateBookDto } from './dto/update-book.dto';
-import { ClientProxy } from '@nestjs/microservices';
+import { map } from 'rxjs';
+
+import { BOOKS_PATTERNS, BookDto as ClientBookDto, CreateBookDto as ClientCreateDto,  UpdateBookDto as ClientUpdateBookDto} from '@app/contracts';
+
 
 @Injectable()
 export class BooksService {
   constructor(@Inject('BOOKS_CLIENT') private booksClient: ClientProxy) {}
 
+  private mapBookDto(bookDto: ClientBookDto): BookDto {
+    return {
+      id: bookDto.id,
+      title: bookDto.title
+    }
+  }
+
   create(createBookDto: CreateBookDto) {
-    return this.booksClient.send('books.createBook', createBookDto)
+    return this.booksClient.send<ClientBookDto, ClientCreateDto>(
+        BOOKS_PATTERNS.CREATE, 
+        createBookDto
+      ).pipe(map(this.mapBookDto))
   }
 
   findAll() {
-    return this.booksClient.send('books.findAllBooks', {})
+    return this.booksClient.send<ClientBookDto>(BOOKS_PATTERNS.FIND_ALL, {})
   }
 
   findOne(id: number) {
-    return this.booksClient.send('books.findOneBook', id)
+    return this.booksClient.send<ClientBookDto>(BOOKS_PATTERNS.FIND_ONE, id)
   }
 
   update(id: number, updateBookDto: UpdateBookDto) {
-    return this.booksClient.send('books.updateBook', { id, ...updateBookDto})
+    return this.booksClient.send<ClientBookDto, ClientUpdateBookDto>(
+      BOOKS_PATTERNS.UPDATE, { id, ...updateBookDto}
+    )
   }
 
   remove(id: number) {
-    return this.booksClient.send('books.removeBook', id)
+    return this.booksClient.send<ClientBookDto>(BOOKS_PATTERNS.REMOVE, id)
   }
 }
